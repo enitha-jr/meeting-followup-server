@@ -42,9 +42,21 @@ app.get('/meetings/completed', (req, res) => {
     });
 })
 
-app.get('/meetings/:id', (req, res) => {
-    const sql = "SELECT * FROM meetings WHERE id = ?";
-    const values = [req.params.id];
+app.get('/meetings/:meetingid/details', (req, res) => {
+    const sql = "SELECT * FROM meetings WHERE meetingid = ?";
+    const values = [req.params.meetingid];
+
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    });
+});
+app.get('/meetings/:meetingid/minutes', (req, res) => {
+    const sql = "SELECT * FROM minutes WHERE meetingid = ?";
+    const values = [req.params.meetingid];
 
     db.query(sql, values, (err, result) => {
         if (err) {
@@ -56,8 +68,21 @@ app.get('/meetings/:id', (req, res) => {
 });
 
 app.post('/newmeeting/post', (req, res) => {
-    const sql = "insert into meetings (followup,title,meetid,dept,host,date,time,venue,description,members) values (?,?,?,?,?,?,?,?,?,?)";
-    const values = [req.body.followup, req.body.title, req.body.meetid, req.body.dept, req.body.host, req.body.date, req.body.time, req.body.venue, req.body.desc, req.body.members];
+    const sql = "insert into meetings (followup,title,mid,dept,host,date,time,venue,description,members) values (?,?,?,?,?,?,?,?,?,?)";
+    const values = [req.body.followup, req.body.title, req.body.mid, req.body.dept, req.body.host, req.body.date, req.body.time, req.body.venue, req.body.desc, req.body.members];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            console.log(result);
+            res.send(result);
+        }
+    });
+});
+
+app.post('/meetings/:meetingid/minutes/post', (req, res) => {
+    const sql = "insert into minutes (meetingid,minute) values (?,?)";
+    const values = [req.body.meetingid, req.body.minute];
     db.query(sql, values, (err, result) => {
         if (err) {
             console.log(err.message);
