@@ -67,7 +67,7 @@ app.get('/meetings/:meetingid/minutes', (req, res) => {
     });
 });
 
-app.post('/newmeeting/post', (req, res) => {
+app.post('/newmeeting', (req, res) => {
     const sql = "insert into meetings (followup,title,mid,dept,host,date,time,venue,description,members) values (?,?,?,?,?,?,?,?,?,?)";
     const values = [req.body.followup, req.body.title, req.body.mid, req.body.dept, req.body.host, req.body.date, req.body.time, req.body.venue, req.body.desc, req.body.members];
     db.query(sql, values, (err, result) => {
@@ -80,7 +80,7 @@ app.post('/newmeeting/post', (req, res) => {
     });
 });
 
-app.post('/meetings/:meetingid/minutes/post', (req, res) => {
+app.post('/meetings/:meetingid/minutes', (req, res) => {
     const sql = "insert into minutes (meetingid,minute) values (?,?)";
     const values = [req.body.meetingid, req.body.minute];
     db.query(sql, values, (err, result) => {
