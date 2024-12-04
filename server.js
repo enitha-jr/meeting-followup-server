@@ -42,6 +42,18 @@ app.get('/meetings/completed', (req, res) => {
     });
 })
 
+app.put('/meetings/:meetingid/change-complete', (req, res) => {
+    const sql = "update meetings set status='completed' where meetingid = ?";
+    const values = [req.params.meetingid];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    });
+});
+
 app.get('/meetings/:meetingid/details', (req, res) => {
     const sql = "SELECT * FROM meetings WHERE meetingid = ?";
     const values = [req.params.meetingid];
@@ -78,6 +90,7 @@ app.get('/meetings/:meetingid/tasks', (req, res) => {
         }
     });
 });
+
 
 
 
