@@ -21,6 +21,16 @@ db.connect((err) => {
     }
 });
 
+app.get('/users', (req, res) => {
+    const sql = "select * from users";
+    db.query(sql, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    }); 
+})
 
 app.get('/meetings/upcoming', (req, res) => {
     const sql = "select * from meetings where status='ongoing' ";
