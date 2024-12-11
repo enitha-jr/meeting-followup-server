@@ -147,7 +147,7 @@ app.post('/newmeeting', (req, res) => {
                         console.log(err.message);
                         res.status(500).send(err.message);
                     } else {
-                        // console.log(result);
+                        console.log(result);
                         res.send(result);
                     }
                 });
