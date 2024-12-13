@@ -234,6 +234,30 @@ app.put('/meetings/updatemeetingdetails/:meetingid', (req, res) => {
     })
 })
 
+app.put('/meetings/:meetingid/minutes/:minuteid', (req, res) => {
+    const sql = "update minutes set minute = ? where meetingid = ? and minuteid = ?";
+    const values = [req.body.minute, req.params.meetingid, req.params.minuteid];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    })
+})
+
+app.delete('/meetings/:meetingid/minutes/:minuteid', (req, res) => {
+    const sql = "delete from minutes where meetingid = ? and minuteid = ?";
+    const values = [req.params.meetingid, req.params.minuteid];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    });
+});
+
 app.listen(5000, () => {
     console.log('Server started on port 5000');
 });
