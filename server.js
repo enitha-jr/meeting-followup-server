@@ -88,6 +88,7 @@ app.get('/meetings/:meetingid/details', (req, res) => {
         }
     });
 });
+
 app.get('/meetings/:meetingid/minutes', (req, res) => {
     const sql = "SELECT * FROM minutes WHERE meetingid = ?";
     const values = [req.params.meetingid];
@@ -112,20 +113,51 @@ app.get('/meetings/:meetingid/tasks', (req, res) => {
     });
 });
 
-
-
+app.get('/meetings/:meetingid/members', (req, res) => {
+    try{
+        const sql = "SELECT * FROM attendance WHERE meetingid = ?";
+        const values = [req.params.meetingid];
+        db.query(sql, values, (err, result) => {
+            if (err) {
+                console.log(err.message);
+            } else {
+                res.send(result);
+            }
+        });
+    }catch(error){
+        console.log(error.message);
+    }
+})
 
 app.post('/newmeeting', (req, res) => {
-    const sql = "insert into meetings (followup,title,mid,dept,host,date,time,venue,description,members) values (?,?,?,?,?,?,?,?,?,?)";
-    const values = [req.body.followup, req.body.title, req.body.mid, req.body.dept, req.body.host, req.body.date, req.body.time, req.body.venue, req.body.desc, req.body.members];
-    db.query(sql, values, (err, result) => {
-        if (err) {
-            console.log(err.message);
-        } else {
-            console.log(result);
-            res.send(result);
-        }
-    });
+    try {
+        const { followup, title, mid, dept, host, date, time, venue, desc, members } = req.body;
+        const meetingsquery = "insert into meetings (followup,title,mid,dept,host,date,time,venue,description,members) values (?,?,?,?,?,?,?,?,?,?)";
+        const meetingvalues = [followup, title, mid, dept, host, date, time, venue, desc, JSON.stringify(members)];
+        db.query(meetingsquery, meetingvalues, (err, result) => {
+            if (err) {
+                console.log(err.message);
+                res.status(500).send(err.message);
+            } else {
+                console.log(result);
+                const meetingid = result.insertId;
+                const membersvalues = members.map(member => [member,meetingid]);
+                const membersquery = "insert into attendance (staffname,meetingid) values ?";
+                db.query(membersquery, [membersvalues], (err, result) => {
+                    if (err) {
+                        console.log(err.message);
+                        res.status(500).send(err.message);
+                    } else {
+                        // console.log(result);
+                        res.send(result);
+                    }
+                });
+            }
+        });
+        
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
 });
 
 app.post('/meetings/:meetingid/minutes', (req, res) => {
@@ -188,6 +220,19 @@ app.post('/meetings/:meetingid/attendance', (req, res) => {
         console.log(error.message);
     }
 });
+
+app.put('/meetings/updatemeetingdetails/:meetingid', (req, res) => {
+    const sql = 'UPDATE meetings SET followup = ?, title = ?, mid = ?, dept = ?, host = ?, date = ?, time = ?, venue = ?, description = ?, members = ? WHERE meetingid = ?'
+    const meetingid = req.params.meetingid
+    const updatedvalues = [req.body.followup, req.body.title, req.body.mid, req.body.dept, req.body.host, req.body.date, req.body.time, req.body.venue, req.body.desc, JSON.stringify(req.body.members), meetingid];
+    db.query(sql, updatedvalues, (err, result) => {
+        if (err) {
+            console.log(err)
+        } else {
+            res.send("updated meeting details")
+        }
+    })
+})
 
 app.listen(5000, () => {
     console.log('Server started on port 5000');
