@@ -112,51 +112,20 @@ app.get('/meetings/:meetingid/tasks', (req, res) => {
     });
 });
 
-app.get('/meetings/:meetingid/members', (req, res) => {
-    try{
-        const sql = "SELECT * FROM attendance WHERE meetingid = ?";
-        const values = [req.params.meetingid];
-        db.query(sql, values, (err, result) => {
-            if (err) {
-                console.log(err.message);
-            } else {
-                res.send(result);
-            }
-        });
-    }catch(error){
-        console.log(error.message);
-    }
-})
+
+
 
 app.post('/newmeeting', (req, res) => {
-    try {
-        const { followup, title, mid, dept, host, date, time, venue, desc, members } = req.body;
-        const meetingsquery = "insert into meetings (followup,title,mid,dept,host,date,time,venue,description,members) values (?,?,?,?,?,?,?,?,?,?)";
-        const meetingvalues = [followup, title, mid, dept, host, date, time, venue, desc, JSON.stringify(members)];
-        db.query(meetingsquery, meetingvalues, (err, result) => {
-            if (err) {
-                console.log(err.message);
-                res.status(500).send(err.message);
-            } else {
-                console.log(result);
-                const meetingid = result.insertId;
-                const membersvalues = members.map(member => [member,meetingid]);
-                const membersquery = "insert into attendance (staffname,meetingid) values ?";
-                db.query(membersquery, [membersvalues], (err, result) => {
-                    if (err) {
-                        console.log(err.message);
-                        res.status(500).send(err.message);
-                    } else {
-                        console.log(result);
-                        res.send(result);
-                    }
-                });
-            }
-        });
-        
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
+    const sql = "insert into meetings (followup,title,mid,dept,host,date,time,venue,description,members) values (?,?,?,?,?,?,?,?,?,?)";
+    const values = [req.body.followup, req.body.title, req.body.mid, req.body.dept, req.body.host, req.body.date, req.body.time, req.body.venue, req.body.desc, req.body.members];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            console.log(result);
+            res.send(result);
+        }
+    });
 });
 
 app.post('/meetings/:meetingid/minutes', (req, res) => {
