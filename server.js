@@ -260,6 +260,18 @@ app.put('/meetings/:meetingid/minutes/:minuteid', (req, res) => {
     })
 })
 
+app.put('/meetings/updatetasks/:meetingid', (req, res) => {
+    const sql = "update tasks set task = ?, description = ?, assignby = ?, assignto = ?, date = ? where meetingid = ?";
+    const values = [req.body.task, req.body.desc, req.body.assignby, req.body.assignto, req.body.date, req.params.meetingid];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    })
+})
+
 app.delete('/meetings/:meetingid/minutes/:minuteid', (req, res) => {
     const sql = "delete from minutes where meetingid = ? and minuteid = ?";
     const values = [req.params.meetingid, req.params.minuteid];
@@ -271,6 +283,18 @@ app.delete('/meetings/:meetingid/minutes/:minuteid', (req, res) => {
         }
     });
 });
+
+app.delete('/meetings/:meetingid/tasks/:taskid', (req, res) => {
+    const sql = "delete from tasks where meetingid = ? and taskid = ?";
+    const values = [req.params.meetingid, req.params.taskid]
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    });
+})
 
 app.post('/meetings/mytasks', (req, res) => {
     const {username} = req.body;
