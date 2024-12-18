@@ -22,8 +22,22 @@ db.connect((err) => {
 });
 
 app.get('/users', (req, res) => {
+    const {user,pass} = req.body;
     const sql = "select * from users";
-    db.query(sql, (err, result) => {
+    db.query(sql,(err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    }); 
+})
+
+app.post('/users', (req, res) => {
+    const {user,pass} = req.body;
+    const sql = "select * from users where username = ? and password = ?";
+    const values = [user,pass];
+    db.query(sql,values, (err, result) => {
         if (err) {
             console.log(err.message);
         } else {
@@ -257,6 +271,60 @@ app.delete('/meetings/:meetingid/minutes/:minuteid', (req, res) => {
         }
     });
 });
+
+app.post('/meetings/mytasks', (req, res) => {
+    const {username} = req.body;
+    const sql = "select * from tasks where assignto = ? ORDER BY CASE WHEN status = 'assigned' THEN 1 WHEN status = 'pending' THEN 2 WHEN status = 'completed' THEN 3 ELSE 4 END, date ASC";
+    const values = [username];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            // console.log(result);
+            res.send(result);
+        }
+    });
+});
+
+app.put('/meetings/updatemytasks', (req, res) => {
+    const {id}=req.body;
+    const sql = "update tasks set status=case when status='assigned' THEN 'pending' ELSE 'assigned' end where taskid = ?";
+    const values = [id];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    })
+})
+
+app.post('/meetings/assignedtasks', (req, res) => {
+    const {username} = req.body;
+    const sql = "select * from tasks where assignby = ? ORDER BY CASE WHEN status = 'pending' THEN 1 WHEN status = 'assigned' THEN 2 WHEN status = 'completed' THEN 3 ELSE 4 END, date ASC";
+    const values = [username];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            // console.log(result);
+            res.send(result);
+        }
+    });
+});
+
+app.put('/meetings/updateassignedtasks', (req, res) => {
+    const {id}=req.body;
+    const sql = "update tasks set status=case when status='pending' THEN 'completed' ELSE 'pending' end where taskid = ?";
+    const values = [id];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    })
+})
 
 app.listen(5000, () => {
     console.log('Server started on port 5000');
