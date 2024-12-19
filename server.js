@@ -2,9 +2,11 @@ const express = require('express');
 const app = express();
 const mysql = require('mysql2');
 const cors = require('cors');
-
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client("17992968099-bg7q3k8s23iphc611hn6aiv23e6rpcqq.apps.googleusercontent.com");
 app.use(cors());
 app.use(express.json());
+const nodemailer = require('nodemailer');
 
 const db = mysql.createConnection({
     host: 'localhost',
@@ -18,6 +20,14 @@ db.connect((err) => {
         console.log(err.message);
     } else {
         console.log('Connected to database');
+    }
+});
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail', 
+    auth: {
+        user: "enitha.it23@bitsathy.ac.in",
+        pass: 'xbqhhgdixiihdufg'
     }
 });
 
@@ -46,9 +56,11 @@ app.post('/users', (req, res) => {
     }); 
 })
 
-app.get('/meetings/upcoming', (req, res) => {
-    const sql = "select * from meetings where status='ongoing' ";
-    db.query(sql, (err, result) => {
+app.post('/meetings/upcoming', (req, res) => {
+    const {username} = req.body;
+    const sql = `select * from meetings where status='ongoing' and host = ? OR JSON_CONTAINS(members, '"${username}"')`;
+    const values = [username];
+    db.query(sql, values,(err, result) => {
         if (err) {
             console.log(err.message);
         } else {
@@ -57,9 +69,11 @@ app.get('/meetings/upcoming', (req, res) => {
     });
 })
 
-app.get('/meetings/completed', (req, res) => {
-    const sql = "select * from meetings where status='completed' ";
-    db.query(sql, (err, result) => {
+app.post('/meetings/completed', (req, res) => {
+    const {username} = req.body;
+    const sql = `select * from meetings where status='completed' and host = ? OR JSON_CONTAINS(members, '"${username}"')`;
+    const values =[username];
+    db.query(sql,values, (err, result) => {
         if (err) {
             console.log(err.message);
         } else {
@@ -219,36 +233,101 @@ app.get('/meetings/:meetingid/members', (req, res) => {
     }
 })
 
+
+
 app.post('/newmeeting', (req, res) => {
     try {
-        const { followup, title, mid, dept, host, date, time, venue, desc, members,minutetaker } = req.body;
-        const meetingsquery = "insert into meetings (followup,title,mid,dept,host,date,time,venue,description,members,minutetaker) values (?,?,?,?,?,?,?,?,?,?,?)";
-        const meetingvalues = [followup, title, mid, dept, host, date, time, venue, desc, JSON.stringify(members),minutetaker];
+        const { followup, title, mid, dept, host, date, time, venue, desc, members, minutetaker } = req.body;
+
+        // Insert into meetings table
+        const meetingsquery = `
+            INSERT INTO meetings 
+            (followup, title, mid, dept, host, date, time, venue, description, members, minutetaker) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const meetingvalues = [followup, title, mid, dept, host, date, time, venue, desc, JSON.stringify(members), minutetaker];
         db.query(meetingsquery, meetingvalues, (err, result) => {
             if (err) {
-                console.log(err.message);
-                res.status(500).send(err.message);
-            } else {
-                console.log(result);
-                const meetingid = result.insertId;
-                const membersvalues = members.map(member => [member,meetingid]);
-                const membersquery = "insert into attendance (staffname,meetingid) values ?";
-                db.query(membersquery, [membersvalues], (err, result) => {
-                    if (err) {
-                        console.log(err.message);
-                        res.status(500).send(err.message);
-                    } else {
-                        // console.log(result);
-                        res.send(result);
-                    }
-                });
+                console.log(err);
+                return res.status(500).send(err.message);
             }
+
+            const meetingid = result.insertId;
+
+            // Insert into attendance table
+            const membersvalues = members.map(member => [member, meetingid]);
+            const membersquery = "INSERT INTO attendance (staffname, meetingid) VALUES ?";
+            db.query(membersquery, [membersvalues], (err) => {
+                if (err) {
+                    console.log(err.message);
+                    return res.status(500).send(err.message);
+                }
+                const membersQuery = "SELECT email FROM users WHERE username IN (?)";
+                    db.query(membersQuery, [members], (err, membersResult) => {
+                        if (err) {
+                            console.log(err.message);
+                            return res.status(500).send(err.message);
+                        }
+                        res.send('Meeting created');
+                        const memberEmails = membersResult.map(row => row.email);
+                        const mailOptions = {
+                            from: "enitha.it23@bitsathy.ac.in",
+                            to: memberEmails.join(','),
+                            subject: `Meeting Invitation: ${title}`,
+                            text: `
+                                You are invited to a meeting with the following details:
+                                
+                                Title: ${title}
+                                Date: ${date}
+                                Time: ${time}
+                                Venue: ${venue}
+                                Description: ${desc}
+                                Minutetaker: ${minutetaker}
+
+                                Please make sure to attend.
+
+                                Regards,
+                                ${host}
+                            `
+                        };
+                        // Send emails
+                        transporter.sendMail(mailOptions, (err, info) => {
+                            if (err) {
+                                console.log(err.message);
+                                return res.status(500).send('Failed to send emails.');
+                            }
+
+                            console.log('Emails sent: ', info.response);
+                        });
+                    });
+            });
         });
-        
     } catch (err) {
         res.status(500).send(err.message);
     }
 });
+
+app.post('/requestmeeting', (req, res) => {
+    const { followup, title, mid, dept, host, date, time, venue, desc, members, minutetaker } = req.body;
+
+        // Insert into meetings table
+        const meetingsquery = `
+            INSERT INTO requests 
+            (followup, title, mid, dept, host, date, time, venue, description, members, minutetaker) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const meetingvalues = [followup, title, mid, dept, host, date, time, venue, desc, JSON.stringify(members), minutetaker];
+        db.query(meetingsquery, meetingvalues, (err, result) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).send(err.message);
+            }else{
+                res.send('Meeting requested');
+            }
+        });
+    
+})
+
 
 app.post('/meetings/:meetingid/minutes', (req, res) => {
     const { meetingid } = req.params;
@@ -265,17 +344,17 @@ app.post('/meetings/:meetingid/minutes', (req, res) => {
         }
     });
 });
-
 app.post('/meetings/:meetingid/tasks', (req, res) => {
     const { meetingid } = req.params;
-    const { minute, task, desc,assignby, assignto, date } = req.body;
-    const selectQuery = "select minuteid,mid from minutes where minute = ? and meetingid = ?";
-    const updateQuery = "update minutes set status='assigned' where minuteid = ?";
-    const insertQuery = "insert into tasks (meetingid,minuteid,task,description,assignby,assignto,date,mid) values (?,?,?,?,?,?,?,?)";
+    const { minute, task, desc, assignby, assignto, date } = req.body;
+    const selectQuery = "SELECT minuteid, mid FROM minutes WHERE minute = ? AND meetingid = ?";
+    const updateQuery = "UPDATE minutes SET status = 'assigned' WHERE minuteid = ?";
+    const insertQuery = "INSERT INTO tasks (meetingid, minuteid, task, description, assignby, assignto, date, mid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
     db.query(selectQuery, [minute, meetingid], (err, result) => {
         if (err) {
             console.log(err.message);
+            return res.status(500).send("Error fetching minute.");
         }
         if (result.length === 0) {
             res.status(404).send("Minute not found for the given meeting");
@@ -283,20 +362,57 @@ app.post('/meetings/:meetingid/tasks', (req, res) => {
         }
         const minuteid = result[0].minuteid;
         const mid = result[0].mid;
-        const values = [meetingid, minuteid, task, desc,assignby, assignto, date,mid];
+        const values = [meetingid, minuteid, task, desc, assignby, assignto, date, mid];
+
         db.query(insertQuery, values, (err, result) => {
             if (err) {
                 console.log(err.message);
-            } else {
-                // console.log(result);
-                res.send(result);
+                return res.status(500).send("Error inserting task.");
             }
+            res.send("task assigned");
+            const mailQuery = "SELECT email FROM users WHERE username IN (?, ?)";
+            db.query(mailQuery, [assignby, assignto], (err, membersResult) => {
+                if (err) {
+                    console.log(err.message);
+                    return res.status(500).send("Error fetching emails.");
+                }
+                
+                if (membersResult.length === 0) {
+                    return res.status(404).send("Emails not found for the given users.");
+                }
+
+                const memberEmails = membersResult.map(row => row.email).join(',');
+
+                // Set up the mail options
+                const mailOptions = {
+                    from: "enitha.it23@bitsathy.ac.in",  // Replace with your email
+                    to: memberEmails,  // Joining multiple email addresses
+                    subject: `TASK ASSIGNED: ${task}`,
+                    text: `
+                        TASK ASSIGNED:
+                        Task: ${task}
+                        Assigned By: ${assignby}
+                        Assigned To: ${assignto}
+                        Description: ${desc}
+                        Due Date: ${date}
+
+                        Regards,
+                        ${assignby}
+                    `
+                };
+                transporter.sendMail(mailOptions, (err, info) => {
+                    if (err) {
+                        console.log(err.message);
+                        return res.status(500).send('Failed to send emails.');
+                    }
+                    console.log('Emails sent: ', info.response);
+                });
+            });
         });
         db.query(updateQuery, [minuteid], (err, result) => {
             if (err) {
                 console.log(err.message);
-            } else {
-                // console.log(result);
+                return res.status(500).send("Error updating minute status.");
             }
         });
     });
@@ -396,19 +512,6 @@ app.post('/meetings/mytasks', (req, res) => {
     });
 });
 
-app.put('/meetings/updatemytasks', (req, res) => {
-    const {id}=req.body;
-    const sql = "update tasks set status=case when status='assigned' THEN 'pending' ELSE 'assigned' end where taskid = ?";
-    const values = [id];
-    db.query(sql, values, (err, result) => {
-        if (err) {
-            console.log(err.message);
-        } else {
-            res.send(result);
-        }
-    })
-})
-
 app.post('/meetings/assignedtasks', (req, res) => {
     const {username} = req.body;
     const sql = "select * from tasks where assignby = ? ORDER BY CASE WHEN status = 'pending' THEN 1 WHEN status = 'assigned' THEN 2 WHEN status = 'completed' THEN 3 ELSE 4 END, date ASC";
@@ -423,6 +526,20 @@ app.post('/meetings/assignedtasks', (req, res) => {
     });
 });
 
+app.put('/meetings/updatemytasks', (req, res) => {
+    const {id}=req.body;
+    const sql = "update tasks set status=case when status='assigned' THEN 'pending' ELSE 'assigned' end where taskid = ?";
+    const values = [id];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    })
+})
+
+
 app.put('/meetings/updateassignedtasks', (req, res) => {
     const {id}=req.body;
     const sql = "update tasks set status=case when status='pending' THEN 'completed' ELSE 'pending' end where taskid = ?";
@@ -436,6 +553,72 @@ app.put('/meetings/updateassignedtasks', (req, res) => {
     })
 })
 
+app.post('/meetings/:meetingid/tobediscussed/alltasks', (req, res) => {
+    const { mid } = req.body;
+    const sql = `
+        SELECT * 
+        FROM tasks 
+        WHERE mid = ? 
+        AND (
+            status != 'completed' OR 
+            (status = 'completed' AND meetingid = (
+                SELECT MAX(meetingid) 
+                FROM tasks 
+                WHERE mid = ?
+            ))
+        )
+        ORDER BY 
+            CASE 
+                WHEN status = 'assigned' THEN 1 
+                WHEN status = 'pending' THEN 2 
+                WHEN status = 'completed' THEN 3 
+                ELSE 4 
+            END, 
+            date ASC
+    `;
+    const values = [mid, mid];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.error(err.message);
+            res.status(500).send('An error occurred while retrieving tasks.');
+        } else {
+            res.send(result);
+        }
+    });
+});
+
+app.post('/meetings/:meetingid/tobediscussed/notassigned', (req, res) => {
+    const {mid} = req.body;
+    const sql = "SELECT * FROM minutes WHERE mid=? and istask = 1 and minuteid not in (select minuteid from tasks)"
+    const values = [mid];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            console.log(mid);
+            
+            res.send(result);
+        }
+    });
+})
+app.post('/users/google-login', async (req, res) => {
+    const { token } = req.body;
+
+    try {
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: "17992968099-bg7q3k8s23iphc611hn6aiv23e6rpcqq.apps.googleusercontent.com",
+        });
+        const payload = ticket.getPayload();
+
+        // Check if user exists or create new user
+        const user = { username: payload.name, email: payload.email }; // Mock user
+        res.json(user);
+    } catch (error) {
+        console.error('Error verifying Google token:', error);
+        res.status(400).send('Invalid Google token');
+    }
+});
 app.listen(5000, () => {
     console.log('Server started on port 5000');
 });
