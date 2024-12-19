@@ -9,8 +9,8 @@ app.use(express.json());
 const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: 'dharnesh10',
-    database: 'meetminutes'
+    password: 'enithaJR',
+    database: 'meeting'
 });
 
 db.connect((err) => {
@@ -117,6 +117,19 @@ app.get('/meetings/:meetingid/details', (req, res) => {
     });
 });
 
+app.get('/meetings/:username', (req, res) => {
+    const { username } = req.params;
+    const sql = `SELECT * FROM meetings WHERE host = ? OR JSON_CONTAINS(members, '"${username}"')`;
+    const values = [username];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    });
+});
+
 app.get('/meetings/:meetingid/minutes', (req, res) => {
     const sql = "SELECT * FROM minutes WHERE meetingid = ?";
     const values = [req.params.meetingid];
@@ -136,6 +149,7 @@ app.get('/meetings/:meetingid/taskminutes', (req, res) => {
         if (err) {
             console.log(err.message);
         } else {
+            console.log(result);    
             res.send(result);
         }
     });
@@ -207,9 +221,9 @@ app.get('/meetings/:meetingid/members', (req, res) => {
 
 app.post('/newmeeting', (req, res) => {
     try {
-        const { followup, title, mid, dept, host, date, time, venue, desc, members } = req.body;
-        const meetingsquery = "insert into meetings (followup,title,mid,dept,host,date,time,venue,description,members) values (?,?,?,?,?,?,?,?,?,?)";
-        const meetingvalues = [followup, title, mid, dept, host, date, time, venue, desc, JSON.stringify(members)];
+        const { followup, title, mid, dept, host, date, time, venue, desc, members,minutetaker } = req.body;
+        const meetingsquery = "insert into meetings (followup,title,mid,dept,host,date,time,venue,description,members,minutetaker) values (?,?,?,?,?,?,?,?,?,?,?)";
+        const meetingvalues = [followup, title, mid, dept, host, date, time, venue, desc, JSON.stringify(members),minutetaker];
         db.query(meetingsquery, meetingvalues, (err, result) => {
             if (err) {
                 console.log(err.message);
