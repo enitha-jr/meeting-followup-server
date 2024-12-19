@@ -264,9 +264,10 @@ app.post('/newmeeting', (req, res) => {
 
 app.post('/meetings/:meetingid/minutes', (req, res) => {
     const { meetingid } = req.params;
-    const { minute,istask } = req.body;
-    const sql = "insert into minutes (meetingid,minute,istask) values (?,?,?)";
-    const values = [meetingid, minute,istask];
+    const { minute,istask,mid} = req.body;
+    console.log(mid);
+    const sql = "insert into minutes (meetingid,minute,istask,mid) values (?,?,?,?)";
+    const values = [meetingid, minute,istask,mid];
     db.query(sql, values, (err, result) => {
         if (err) {
             console.log(err.message);
@@ -280,9 +281,9 @@ app.post('/meetings/:meetingid/minutes', (req, res) => {
 app.post('/meetings/:meetingid/tasks', (req, res) => {
     const { meetingid } = req.params;
     const { minute, task, desc,assignby, assignto, date } = req.body;
-    const selectQuery = "select minuteid from minutes where minute = ? and meetingid = ?";
+    const selectQuery = "select minuteid,mid from minutes where minute = ? and meetingid = ?";
     const updateQuery = "update minutes set status='assigned' where minuteid = ?";
-    const insertQuery = "insert into tasks (meetingid,minuteid,task,description,assignby,assignto,date) values (?,?,?,?,?,?,?)";
+    const insertQuery = "insert into tasks (meetingid,minuteid,task,description,assignby,assignto,date,mid) values (?,?,?,?,?,?,?,?)";
 
     db.query(selectQuery, [minute, meetingid], (err, result) => {
         if (err) {
@@ -293,7 +294,8 @@ app.post('/meetings/:meetingid/tasks', (req, res) => {
             return;
         }
         const minuteid = result[0].minuteid;
-        const values = [meetingid, minuteid, task, desc,assignby, assignto, date];
+        const mid = result[0].mid;
+        const values = [meetingid, minuteid, task, desc,assignby, assignto, date,mid];
         db.query(insertQuery, values, (err, result) => {
             if (err) {
                 console.log(err.message);
