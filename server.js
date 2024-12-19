@@ -143,6 +143,18 @@ app.get('/meetings/:meetingid/members', (req, res) => {
     }
 })
 
+app.get('/meetings/:meetingid/taskminutes', (req, res) => {
+    const sql = "select * from minutes where meetingid = ?";
+    const values = [req.params.meetingid];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    });
+})
+
 app.post('/newmeeting', (req, res) => {
     try {
         const { followup, title, mid, dept, host, date, time, venue, desc, members } = req.body;
