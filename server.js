@@ -11,8 +11,8 @@ const nodemailer = require('nodemailer');
 const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: 'enithaJR',
-    database: 'meeting'
+    password: 'dharnesh10',
+    database: 'meetminutes'
 });
 
 db.connect((err) => {
@@ -42,6 +42,19 @@ app.get('/users', (req, res) => {
     }); 
 })
 
+app.post('/register', (req, res) => {
+    const { username, email, password } = req.body;
+    const sql = "insert into users (username, email, password) values (?, ?, ?)";
+    const values = [username, email, password];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    });
+});
+
 app.post('/users', (req, res) => {
     const {user,pass} = req.body;
     const sql = "select * from users where username = ? and password = ?";
@@ -64,6 +77,7 @@ app.post('/meetings/upcoming', (req, res) => {
             console.log(err.message);
         } else {
             res.send(result);
+            
         }
     });
 })
@@ -230,6 +244,18 @@ app.get('/meetings/:meetingid/members', (req, res) => {
     }catch(error){
         console.log(error.message);
     }
+})
+
+app.get('/meetings/:meetingid/taskminutes', (req, res) => {
+    const sql = "select * from minutes where meetingid = ?";
+    const values = [req.params.meetingid];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    });
 })
 
 
