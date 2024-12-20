@@ -42,6 +42,19 @@ app.get('/users', (req, res) => {
     }); 
 })
 
+app.post('/register', (req, res) => {
+    const { username, email, password } = req.body;
+    const sql = "insert into users (username, email, password) values (?, ?, ?)";
+    const values = [username, email, password];
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    });
+});
+
 app.post('/users', (req, res) => {
     const {user,pass} = req.body;
     const sql = "select * from users where username = ? and password = ?";
@@ -64,6 +77,7 @@ app.post('/meetings/upcoming', (req, res) => {
             console.log(err.message);
         } else {
             res.send(result);
+            
         }
     });
 })
