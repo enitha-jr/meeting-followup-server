@@ -11,8 +11,8 @@ const nodemailer = require('nodemailer');
 const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: 'dharnesh10',
-    database: 'meetminutes'
+    password: 'enithaJR',
+    database: 'meeting'
 });
 
 db.connect((err) => {
@@ -70,7 +70,7 @@ app.post('/users', (req, res) => {
 
 app.post('/meetings/upcoming', (req, res) => {
     const {username} = req.body;
-    const sql = `select * from meetings where status='ongoing' and host = ? OR minutetaker = ? OR JSON_CONTAINS(members, '"${username}"')`;
+    const sql = `select * from meetings where status='ongoing' and (host = ? OR minutetaker = ? OR JSON_CONTAINS(members, '"${username}"'))`;
     const values = [username,username];
     db.query(sql, values,(err, result) => {
         if (err) {
@@ -84,8 +84,8 @@ app.post('/meetings/upcoming', (req, res) => {
 
 app.post('/meetings/completed', (req, res) => {
     const {username} = req.body;
-    const sql = `select * from meetings where status='completed' and host = ? OR minutetaker = ? OR JSON_CONTAINS(members, '"${username}"')`;
-    const values =[username];
+    const sql = `select * from meetings where status='completed' and (host = ? OR minutetaker = ? OR JSON_CONTAINS(members, '"${username}"'))`;
+    const values =[username,username];
     db.query(sql,values, (err, result) => {
         if (err) {
             console.log(err.message);
