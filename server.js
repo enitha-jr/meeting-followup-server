@@ -27,7 +27,7 @@ const transporter = nodemailer.createTransport({
     service: 'gmail', 
     auth: {
         user: "enitha.it23@bitsathy.ac.in",
-        pass: ''
+        pass: 'xbqhhgdixiihdufg'
     }
 });
 
@@ -621,6 +621,19 @@ app.post('/users/google-login', async (req, res) => {
         res.status(400).send('Invalid Google token');
     }
 });
+
+app.get('/meetings/request', (req, res) => {
+    const sql = "select * from meetings";
+    console.log('asd');
+    db.query(sql,(err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+            console.log(result);
+        }
+    })
+})
 app.listen(5000, () => {
     console.log('Server started on port 5000');
 });
