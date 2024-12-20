@@ -27,12 +27,11 @@ const transporter = nodemailer.createTransport({
     service: 'gmail', 
     auth: {
         user: "enitha.it23@bitsathy.ac.in",
-        pass: 'xbqhhgdixiihdufg'
+        pass: ''
     }
 });
 
 app.get('/users', (req, res) => {
-    const {user,pass} = req.body;
     const sql = "select * from users";
     db.query(sql,(err, result) => {
         if (err) {
@@ -58,8 +57,8 @@ app.post('/users', (req, res) => {
 
 app.post('/meetings/upcoming', (req, res) => {
     const {username} = req.body;
-    const sql = `select * from meetings where status='ongoing' and host = ? OR JSON_CONTAINS(members, '"${username}"')`;
-    const values = [username];
+    const sql = `select * from meetings where status='ongoing' and host = ? OR minutetaker = ? OR JSON_CONTAINS(members, '"${username}"')`;
+    const values = [username,username];
     db.query(sql, values,(err, result) => {
         if (err) {
             console.log(err.message);
@@ -71,7 +70,7 @@ app.post('/meetings/upcoming', (req, res) => {
 
 app.post('/meetings/completed', (req, res) => {
     const {username} = req.body;
-    const sql = `select * from meetings where status='completed' and host = ? OR JSON_CONTAINS(members, '"${username}"')`;
+    const sql = `select * from meetings where status='completed' and host = ? OR minutetaker = ? OR JSON_CONTAINS(members, '"${username}"')`;
     const values =[username];
     db.query(sql,values, (err, result) => {
         if (err) {
@@ -274,44 +273,44 @@ app.post('/newmeeting', (req, res) => {
                     console.log(err.message);
                     return res.status(500).send(err.message);
                 }
-                const membersQuery = "SELECT email FROM users WHERE username IN (?)";
-                    db.query(membersQuery, [members], (err, membersResult) => {
-                        if (err) {
-                            console.log(err.message);
-                            return res.status(500).send(err.message);
-                        }
-                        res.send('Meeting created');
-                        const memberEmails = membersResult.map(row => row.email);
-                        const mailOptions = {
-                            from: "enitha.it23@bitsathy.ac.in",
-                            to: memberEmails.join(','),
-                            subject: `Meeting Invitation: ${title}`,
-                            text: `
-                                You are invited to a meeting with the following details:
+                // const membersQuery = "SELECT email FROM users WHERE username IN (?)";
+                //     db.query(membersQuery, [members], (err, membersResult) => {
+                //         if (err) {
+                //             console.log(err.message);
+                //             return res.status(500).send(err.message);
+                //         }
+                //         res.send('Meeting created');
+                //         const memberEmails = membersResult.map(row => row.email);
+                //         const mailOptions = {
+                //             from: "enitha.it23@bitsathy.ac.in",
+                //             to: memberEmails.join(','),
+                //             subject: `Meeting Invitation: ${title}`,
+                //             text: `
+                //                 You are invited to a meeting with the following details:
                                 
-                                Title: ${title}
-                                Date: ${date}
-                                Time: ${time}
-                                Venue: ${venue}
-                                Description: ${desc}
-                                Minutetaker: ${minutetaker}
+                //                 Title: ${title}
+                //                 Date: ${date}
+                //                 Time: ${time}
+                //                 Venue: ${venue}
+                //                 Description: ${desc}
+                //                 Minutetaker: ${minutetaker}
 
-                                Please make sure to attend.
+                //                 Please make sure to attend.
 
-                                Regards,
-                                ${host}
-                            `
-                        };
-                        // Send emails
-                        transporter.sendMail(mailOptions, (err, info) => {
-                            if (err) {
-                                console.log(err.message);
-                                return res.status(500).send('Failed to send emails.');
-                            }
+                //                 Regards,
+                //                 ${host}
+                //             `
+                //         };
+                //         // Send emails
+                //         transporter.sendMail(mailOptions, (err, info) => {
+                //             if (err) {
+                //                 console.log(err.message);
+                //                 return res.status(500).send('Failed to send emails.');
+                //             }
 
-                            console.log('Emails sent: ', info.response);
-                        });
-                    });
+                //             console.log('Emails sent: ', info.response);
+                //         });
+                //     });
             });
         });
     } catch (err) {
@@ -396,29 +395,29 @@ app.post('/meetings/:meetingid/tasks', (req, res) => {
                 const memberEmails = membersResult.map(row => row.email).join(',');
 
                 // Set up the mail options
-                const mailOptions = {
-                    from: "enitha.it23@bitsathy.ac.in",  // Replace with your email
-                    to: memberEmails,  // Joining multiple email addresses
-                    subject: `TASK ASSIGNED: ${task}`,
-                    text: `
-                        TASK ASSIGNED:
-                        Task: ${task}
-                        Assigned By: ${assignby}
-                        Assigned To: ${assignto}
-                        Description: ${desc}
-                        Due Date: ${date}
+                // const mailOptions = {
+                //     from: "enitha.it23@bitsathy.ac.in",  // Replace with your email
+                //     to: memberEmails,  // Joining multiple email addresses
+                //     subject: `TASK ASSIGNED: ${task}`,
+                //     text: `
+                //         TASK ASSIGNED:
+                //         Task: ${task}
+                //         Assigned By: ${assignby}
+                //         Assigned To: ${assignto}
+                //         Description: ${desc}
+                //         Due Date: ${date}
 
-                        Regards,
-                        ${assignby}
-                    `
-                };
-                transporter.sendMail(mailOptions, (err, info) => {
-                    if (err) {
-                        console.log(err.message);
-                        return res.status(500).send('Failed to send emails.');
-                    }
-                    console.log('Emails sent: ', info.response);
-                });
+                //         Regards,
+                //         ${assignby}
+                //     `
+                // };
+                // transporter.sendMail(mailOptions, (err, info) => {
+                //     if (err) {
+                //         console.log(err.message);
+                //         return res.status(500).send('Failed to send emails.');
+                //     }
+                //     console.log('Emails sent: ', info.response);
+                // });
             });
         });
         db.query(updateQuery, [minuteid], (err, result) => {
@@ -567,6 +566,7 @@ app.put('/meetings/updateassignedtasks', (req, res) => {
 
 app.post('/meetings/:meetingid/tobediscussed/alltasks', (req, res) => {
     const { mid } = req.body;
+    const {meetingid} = req.params;
     const sql = `
         SELECT * 
         FROM tasks 
@@ -579,6 +579,7 @@ app.post('/meetings/:meetingid/tobediscussed/alltasks', (req, res) => {
                 WHERE mid = ?
             ))
         )
+        and meetingid != ?
         ORDER BY 
             CASE 
                 WHEN status = 'assigned' THEN 1 
@@ -588,7 +589,7 @@ app.post('/meetings/:meetingid/tobediscussed/alltasks', (req, res) => {
             END, 
             date ASC
     `;
-    const values = [mid, mid];
+    const values = [mid, mid, meetingid];
     db.query(sql, values, (err, result) => {
         if (err) {
             console.error(err.message);
@@ -601,8 +602,9 @@ app.post('/meetings/:meetingid/tobediscussed/alltasks', (req, res) => {
 
 app.post('/meetings/:meetingid/tobediscussed/notassigned', (req, res) => {
     const {mid} = req.body;
-    const sql = "SELECT * FROM minutes WHERE mid=? and istask = 1 and minuteid not in (select minuteid from tasks)"
-    const values = [mid];
+    const {meetingid} = req.params;
+    const sql = "SELECT * FROM minutes WHERE mid=? and istask = 1 and minuteid not in (select minuteid from tasks) and meetingid != ?";
+    const values = [mid,meetingid];
     db.query(sql, values, (err, result) => {
         if (err) {
             console.log(err.message);
