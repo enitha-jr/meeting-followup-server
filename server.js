@@ -24,7 +24,7 @@ db.connect((err) => {
 });
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail', 
+    service: 'gmail',
     auth: {
         user: "enitha.it23@bitsathy.ac.in",
         pass: 'xbqhhgdixiihdufg'
@@ -33,14 +33,37 @@ const transporter = nodemailer.createTransport({
 
 app.get('/users', (req, res) => {
     const sql = "select * from users";
-    db.query(sql,(err, result) => {
+    db.query(sql, (err, result) => {
         if (err) {
             console.log(err.message);
         } else {
             res.send(result);
         }
-    }); 
+    });
 })
+
+app.get('/getmembers', (req, res) => {
+    const { host, title } = req.query; 
+    const sql = "SELECT memberlist FROM members WHERE host = ? AND title = ?";
+    db.query(sql, [host, title], (err, result) => {
+        if (err) {
+            console.error("Database error:", err);
+            return res.status(500).send({ error: "Database query failed" });
+        }
+        if (result.length > 0) {
+            try {
+                console.log(result[0].memberlist);
+                res.send(result[0].memberlist);
+            } catch (parseError) {
+                console.error("Error parsing memberlist:", parseError);
+                res.status(500).send({ error: "Error parsing memberlist data" });
+            }
+        } else {
+            res.send({ members: [] });
+        }
+    });
+});
+
 
 app.post('/register', (req, res) => {
     const { username, email, password } = req.body;
@@ -56,37 +79,38 @@ app.post('/register', (req, res) => {
 });
 
 app.post('/users', (req, res) => {
-    const {user,pass} = req.body;
+    const { user, pass } = req.body;
     const sql = "select * from users where username = ? and password = ?";
-    const values = [user,pass];
-    db.query(sql,values, (err, result) => {
+    const values = [user, pass];
+    db.query(sql, values, (err, result) => {
         if (err) {
             console.log(err.message);
         } else {
+            console.log(result);
             res.send(result);
         }
-    }); 
+    });
 })
 
 app.post('/meetings/upcoming', (req, res) => {
-    const {username} = req.body;
+    const { username } = req.body;
     const sql = `select * from meetings where status='ongoing' and (host = ? OR minutetaker = ? OR JSON_CONTAINS(members, '"${username}"'))`;
-    const values = [username,username];
-    db.query(sql, values,(err, result) => {
+    const values = [username, username];
+    db.query(sql, values, (err, result) => {
         if (err) {
             console.log(err.message);
         } else {
             res.send(result);
-            
+
         }
     });
 })
 
 app.post('/meetings/completed', (req, res) => {
-    const {username} = req.body;
+    const { username } = req.body;
     const sql = `select * from meetings where status='completed' and (host = ? OR minutetaker = ? OR JSON_CONTAINS(members, '"${username}"'))`;
-    const values =[username,username];
-    db.query(sql,values, (err, result) => {
+    const values = [username, username];
+    db.query(sql, values, (err, result) => {
         if (err) {
             console.log(err.message);
         } else {
@@ -99,7 +123,7 @@ app.post('/meetings/mymeeting', (req, res) => {
     const { host } = req.body;
     const sql = "select * from meetings where host= ?";
     const values = [host];
-    db.query(sql,values, (err, result) => {
+    db.query(sql, values, (err, result) => {
         if (err) {
             console.log(err.message);
         } else {
@@ -176,7 +200,7 @@ app.get('/meetings/:meetingid/taskminutes', (req, res) => {
         if (err) {
             console.log(err.message);
         } else {
-            console.log(result);    
+            console.log(result);
             res.send(result);
         }
     });
@@ -231,7 +255,7 @@ app.get('/meetings/:meetingid/tasks', (req, res) => {
 });
 
 app.get('/meetings/:meetingid/members', (req, res) => {
-    try{
+    try {
         const sql = "SELECT * FROM attendance WHERE meetingid = ?";
         const values = [req.params.meetingid];
         db.query(sql, values, (err, result) => {
@@ -241,7 +265,7 @@ app.get('/meetings/:meetingid/members', (req, res) => {
                 res.send(result);
             }
         });
-    }catch(error){
+    } catch (error) {
         console.log(error.message);
     }
 })
@@ -301,7 +325,7 @@ app.post('/newmeeting', (req, res) => {
                 //             subject: `Meeting Invitation: ${title}`,
                 //             text: `
                 //                 You are invited to a meeting with the following details:
-                                
+
                 //                 Title: ${title}
                 //                 Date: ${date}
                 //                 Time: ${time}
@@ -335,31 +359,31 @@ app.post('/newmeeting', (req, res) => {
 app.post('/requestmeeting', (req, res) => {
     const { followup, title, mid, dept, host, date, time, venue, desc, members, minutetaker } = req.body;
 
-        // Insert into meetings table
-        const meetingsquery = `
+    // Insert into meetings table
+    const meetingsquery = `
             INSERT INTO requests 
             (followup, title, mid, dept, host, date, time, venue, description, members, minutetaker) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        const meetingvalues = [followup, title, mid, dept, host, date, time, venue, desc, JSON.stringify(members), minutetaker];
-        db.query(meetingsquery, meetingvalues, (err, result) => {
-            if (err) {
-                console.log(err);
-                return res.status(500).send(err.message);
-            }else{
-                res.send('Meeting requested');
-            }
-        });
-    
+    const meetingvalues = [followup, title, mid, dept, host, date, time, venue, desc, JSON.stringify(members), minutetaker];
+    db.query(meetingsquery, meetingvalues, (err, result) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send(err.message);
+        } else {
+            res.send('Meeting requested');
+        }
+    });
+
 })
 
 
 app.post('/meetings/:meetingid/minutes', (req, res) => {
     const { meetingid } = req.params;
-    const { minute,istask,mid} = req.body;
+    const { minute, istask, mid } = req.body;
     console.log(mid);
     const sql = "insert into minutes (meetingid,minute,istask,mid) values (?,?,?,?)";
-    const values = [meetingid, minute,istask,mid];
+    const values = [meetingid, minute, istask, mid];
     db.query(sql, values, (err, result) => {
         if (err) {
             console.log(err.message);
@@ -401,7 +425,7 @@ app.post('/meetings/:meetingid/tasks', (req, res) => {
                     console.log(err.message);
                     return res.status(500).send("Error fetching emails.");
                 }
-                
+
                 if (membersResult.length === 0) {
                     return res.status(404).send("Emails not found for the given users.");
                 }
@@ -444,20 +468,20 @@ app.post('/meetings/:meetingid/tasks', (req, res) => {
 });
 
 app.put('/meetings/attendance', (req, res) => {
-    try{
-        const {attendanceid} = req.body;
+    try {
+        const { attendanceid } = req.body;
         console.log("Received attendanceid:", attendanceid);
-        const sql ="update attendance set status=case when status=0 THEN 1 ELSE 0 end where attendanceid = ? ";
+        const sql = "update attendance set status=case when status=0 THEN 1 ELSE 0 end where attendanceid = ? ";
         const values = [attendanceid];
-        db.query(sql,values,(err,result)=>{
-            if(err){
+        db.query(sql, values, (err, result) => {
+            if (err) {
                 console.log(err.message);
-            }else{
+            } else {
                 console.log(result);
                 res.send("updated");
             }
         });
-    }catch{
+    } catch {
         console.log(error.message);
     }
 });
@@ -524,7 +548,7 @@ app.delete('/meetings/:meetingid/tasks/:taskid', (req, res) => {
 })
 
 app.post('/meetings/mytasks', (req, res) => {
-    const {username} = req.body;
+    const { username } = req.body;
     const sql = "select * from tasks where assignto = ? ORDER BY CASE WHEN status = 'assigned' THEN 1 WHEN status = 'pending' THEN 2 WHEN status = 'completed' THEN 3 ELSE 4 END, date ASC";
     const values = [username];
     db.query(sql, values, (err, result) => {
@@ -538,7 +562,7 @@ app.post('/meetings/mytasks', (req, res) => {
 });
 
 app.post('/meetings/assignedtasks', (req, res) => {
-    const {username} = req.body;
+    const { username } = req.body;
     const sql = "select * from tasks where assignby = ? ORDER BY CASE WHEN status = 'pending' THEN 1 WHEN status = 'assigned' THEN 2 WHEN status = 'completed' THEN 3 ELSE 4 END, date ASC";
     const values = [username];
     db.query(sql, values, (err, result) => {
@@ -552,7 +576,7 @@ app.post('/meetings/assignedtasks', (req, res) => {
 });
 
 app.put('/meetings/updatemytasks', (req, res) => {
-    const {id}=req.body;
+    const { id } = req.body;
     const sql = "update tasks set status=case when status='assigned' THEN 'pending' ELSE 'assigned' end where taskid = ?";
     const values = [id];
     db.query(sql, values, (err, result) => {
@@ -566,7 +590,7 @@ app.put('/meetings/updatemytasks', (req, res) => {
 
 
 app.put('/meetings/updateassignedtasks', (req, res) => {
-    const {id}=req.body;
+    const { id } = req.body;
     const sql = "update tasks set status=case when status='pending' THEN 'completed' ELSE 'pending' end where taskid = ?";
     const values = [id];
     db.query(sql, values, (err, result) => {
@@ -580,7 +604,7 @@ app.put('/meetings/updateassignedtasks', (req, res) => {
 
 app.post('/meetings/:meetingid/tobediscussed/alltasks', (req, res) => {
     const { mid } = req.body;
-    const {meetingid} = req.params;
+    const { meetingid } = req.params;
     const sql = `
         SELECT * 
         FROM tasks 
@@ -615,16 +639,16 @@ app.post('/meetings/:meetingid/tobediscussed/alltasks', (req, res) => {
 });
 
 app.post('/meetings/:meetingid/tobediscussed/notassigned', (req, res) => {
-    const {mid} = req.body;
-    const {meetingid} = req.params;
+    const { mid } = req.body;
+    const { meetingid } = req.params;
     const sql = "SELECT * FROM minutes WHERE mid=? and istask = 1 and minuteid not in (select minuteid from tasks) and meetingid != ?";
-    const values = [mid,meetingid];
+    const values = [mid, meetingid];
     db.query(sql, values, (err, result) => {
         if (err) {
             console.log(err.message);
         } else {
             console.log(mid);
-            
+
             res.send(result);
         }
     });
@@ -651,7 +675,7 @@ app.post('/users/google-login', async (req, res) => {
 app.get('/meetings/request', (req, res) => {
     const sql = "select * from meetings";
     console.log('asd');
-    db.query(sql,(err, result) => {
+    db.query(sql, (err, result) => {
         if (err) {
             console.log(err.message);
         } else {
