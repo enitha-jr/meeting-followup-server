@@ -33,6 +33,18 @@ const transporter = nodemailer.createTransport({
 
 app.get('/users', (req, res) => {
     const sql = "select * from users";
+
+    db.query(sql, (err, result) => {
+        if (err) {
+            console.log(err.message);
+        } else {
+            res.send(result);
+        }
+    });
+})
+
+app.get('/groups', (req, res) => {
+    const sql = "select * from groups";
     db.query(sql, (err, result) => {
         if (err) {
             console.log(err.message);
@@ -78,7 +90,7 @@ app.post('/register', (req, res) => {
     });
 });
 
-app.post('/users', (req, res) => {
+app.post('/users', async (req, res) => {
     const { user, pass } = req.body;
     const sql = "select * from users where username = ? and password = ?";
     const values = [user, pass];
@@ -101,14 +113,13 @@ app.post('/meetings/upcoming', (req, res) => {
             console.log(err.message);
         } else {
             res.send(result);
-
         }
     });
 })
 
 app.post('/meetings/completed', (req, res) => {
     const { username } = req.body;
-    const sql = `select * from meetings where status='completed' and (host = ? OR minutetaker = ? OR JSON_CONTAINS(members, '"${username}"'))`;
+    const sql = `select * from meetings where status='completed' and (host = ? OR minutetaker = ? OR JSON_CONTAINS(members, '"${username}"')) ORDER BY date DESC`;
     const values = [username, username];
     db.query(sql, values, (err, result) => {
         if (err) {
